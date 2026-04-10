@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LifeTracker — Dashboard</title>
+  <script src="auth.js"></script>
+  <script>(function(){ if(!Auth.isLoggedIn()) window.location.href="login.html"; })();</script>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .dash-intro {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .dash-intro-left h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .dash-intro-left p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Stat card colors */
+    #cardSteps   { --accent-color: var(--accent); --icon-bg: rgba(45,212,191,0.12); }
+    #cardWeight  { --accent-color: var(--accent2); --icon-bg: rgba(96,165,250,0.12); }
+    #cardCal     { --accent-color: var(--warning); --icon-bg: rgba(251,191,36,0.12); }
+    #cardProtein { --accent-color: #60a5fa; --icon-bg: rgba(96,165,250,0.12); }
+    #cardDaysLogged { --accent-color: var(--purple); --icon-bg: rgba(167,139,250,0.12); }
+    #cardMood    { --accent-color: var(--accent3); --icon-bg: rgba(74,222,128,0.12); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ─── SIDEBAR ─────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebarD">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🏃</div>
+      <div class="logo-text">LifeTracker</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Navigation</div>
+      <a class="nav-item" href="index.html">
+        <span class="nav-icon">📝</span> Daily Log
+      </a>
+      <a class="nav-item active" href="dashboard.html">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+
+      <div class="nav-section" style="margin-top:8px">Period</div>
+      <button class="period-btn active nav-item" data-days="7"
+        style="border-radius:var(--radius-sm);justify-content:flex-start">
+        <span class="nav-icon">📅</span> Last 7 Days
+      </button>
+      <button class="period-btn nav-item" data-days="14"
+        style="border-radius:var(--radius-sm);justify-content:flex-start">
+        <span class="nav-icon">📅</span> Last 14 Days
+      </button>
+      <button class="period-btn nav-item" data-days="30"
+        style="border-radius:var(--radius-sm);justify-content:flex-start">
+        <span class="nav-icon">📅</span> Last 30 Days
+      </button>
+      <button class="period-btn nav-item" data-days="90"
+        style="border-radius:var(--radius-sm);justify-content:flex-start">
+        <span class="nav-icon">📅</span> Last 90 Days
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="flex items-center justify-between">
+        <span style="font-size:13px;color:var(--text-secondary)">🌙 Dark Mode</span>
+        <label class="toggle">
+          <input type="checkbox" id="darkModeToggleD" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <button class="nav-item mt-2" id="exportBtnD" style="color:var(--accent)">
+        <span class="nav-icon">⬇️</span> Export JSON
+      </button>
+    </div>
+  </aside>
+
+  <!-- Sidebar mobile overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlayD"></div>
+
+  <!-- ─── MAIN ──────────────────────────────────────────────────── -->
+  <main class="main">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" id="hamburgerD">☰</button>
+        <div class="topbar-title">Dashboard</div>
+      </div>
+      <div class="topbar-actions">
+        <a href="index.html" class="btn btn-primary btn-sm">📝 Log Today →</a>
+        <div id="userChipD" style="display:flex;align-items:center;gap:8px;margin-left:4px;cursor:pointer;position:relative" onclick="toggleUserMenuD()">
+          <div id="userAvatarD" style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;border:2px solid var(--border)"></div>
+          <div id="userMenuD" style="display:none;position:absolute;top:calc(100%+10px);right:0;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:190px;z-index:999;overflow:hidden">
+            <div style="padding:14px;border-bottom:1px solid var(--border)">
+              <div style="font-size:14px;font-weight:700;color:var(--text-primary)" id="menuNameD"></div>
+              <div style="font-size:11px;color:var(--text-muted)" id="menuUsernameD"></div>
+            </div>
+            <a href="index.html" style="display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:13px;color:var(--text-secondary);text-decoration:none" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">📝 Daily Log</a>
+            <div style="border-top:1px solid var(--border)"></div>
+            <button onclick="Auth.logout()" style="display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:13px;color:#f87171;background:none;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🚪 Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- Intro header -->
+      <div class="dash-intro">
+        <div class="dash-intro-left">
+          <h1>Your Health Overview</h1>
+          <p>Track your progress across steps, nutrition, weight, and mood</p>
+        </div>
+        <!-- Period filter (also in sidebar on desktop) -->
+        <div class="filter-bar" style="margin-bottom:0">
+          <button class="period-btn active" data-days="7">7d</button>
+          <button class="period-btn" data-days="14">14d</button>
+          <button class="period-btn" data-days="30">30d</button>
+          <button class="period-btn" data-days="90">90d</button>
+        </div>
+      </div>
+
+      <!-- ── STAT CARDS ── -->
+      <div class="stats-grid stagger">
+
+        <div class="stat-card fade-in" id="cardSteps">
+          <div class="stat-icon">👟</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">Steps Today</div>
+          <div class="stat-sub">Loading…</div>
+          <div class="stat-progress"><div class="stat-progress-bar" style="width:0%"></div></div>
+        </div>
+
+        <div class="stat-card fade-in" id="cardWeight">
+          <div class="stat-icon">⚖️</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">Latest Weight</div>
+          <div class="stat-sub">Loading…</div>
+          <div class="stat-progress"><div class="stat-progress-bar" style="width:0%"></div></div>
+        </div>
+
+        <div class="stat-card fade-in" id="cardCal">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">Calories Today</div>
+          <div class="stat-sub">Loading…</div>
+          <div class="stat-progress"><div class="stat-progress-bar" style="width:0%"></div></div>
+        </div>
+
+        <div class="stat-card fade-in" id="cardProtein">
+          <div class="stat-icon">💪</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">Protein Today</div>
+          <div class="stat-sub">Loading…</div>
+          <div class="stat-progress"><div class="stat-progress-bar" style="width:0%"></div></div>
+        </div>
+
+        <div class="stat-card fade-in" id="cardDaysLogged">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">Days Logged</div>
+          <div class="stat-sub">Loading…</div>
+          <div class="stat-progress"><div class="stat-progress-bar" style="width:0%"></div></div>
+        </div>
+
+        <div class="stat-card fade-in" id="cardMood">
+          <div class="stat-icon">😊</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">Top Mood</div>
+          <div class="stat-sub">Loading…</div>
+          <div class="stat-progress"><div class="stat-progress-bar" style="width:0%"></div></div>
+        </div>
+
+      </div>
+
+      <!-- ── TODAY SUMMARY ── -->
+      <div id="todaySummary" class="mb-4"></div>
+
+      <!-- ── CHARTS ROW 1 ── -->
+      <div class="charts-grid">
+
+        <div class="chart-card fade-in">
+          <div class="card-header">
+            <div class="card-title">👟 Steps Over Time</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chartSteps"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card fade-in">
+          <div class="card-header">
+            <div class="card-title">⚖️ Weight Progress</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chartWeight"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── CHARTS ROW 2 ── -->
+      <div class="charts-grid">
+
+        <div class="chart-card fade-in">
+          <div class="card-header">
+            <div class="card-title">🔥 Daily Calories & Protein</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chartCalories"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card fade-in">
+          <div class="card-header">
+            <div class="card-title">🥗 Avg Macro Split (g)</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chartNutrition"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── CHARTS ROW 3 ── -->
+      <div class="charts-grid">
+        <div class="chart-card full-width fade-in">
+          <div class="card-header">
+            <div class="card-title">💪 Daily Protein Intake</div>
+          </div>
+          <div class="chart-canvas-wrap" style="height:180px">
+            <canvas id="chartProtein"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WEEKLY SUMMARY ── -->
+      <div id="weeklySummary" class="mb-4"></div>
+
+      <!-- ── QUICK ACTIONS ── -->
+      <div class="card fade-in" style="margin-top:0">
+        <div class="card-header">
+          <div class="card-title">⚡ Quick Actions</div>
+        </div>
+        <div class="flex gap-3" style="flex-wrap:wrap">
+          <a href="index.html" class="btn btn-primary">📝 Log Today's Data</a>
+          <button class="btn btn-secondary" id="exportBtnDBottom">⬇️ Export All Data</button>
+          <a href="index.html#" onclick="localStorage.clear()" class="btn btn-danger"
+            style="text-decoration:none"
+            onclick="if(confirm('Clear all data?'))localStorage.clear()">🗑️ Clear All Data</a>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </main>
+
+</div><!-- /app-shell -->
+
+<!-- Scripts (order matters) -->
+<script src="data.js"></script>
+<script src="charts.js"></script>
+<script src="dashboard.js"></script>
+<script>
+  (function() {
+    const s = Auth.getSession();
+    if (!s) return;
+    const av = document.getElementById("userAvatarD");
+    const mn = document.getElementById("menuNameD");
+    const mu = document.getElementById("menuUsernameD");
+    if (av) {
+      const a = Auth.getUsers()[s.username]?.avatar || Auth.generateAvatar(s.displayName);
+      av.textContent = a.initials;
+      av.style.background = a.color;
+      av.style.color = "#0f1117";
+    }
+    if (mn) mn.textContent = s.displayName;
+    if (mu) mu.textContent = "@" + s.username;
+  })();
+  function toggleUserMenuD() {
+    const m = document.getElementById("userMenuD");
+    if (m) m.style.display = m.style.display === "none" ? "block" : "none";
+  }
+  document.addEventListener("click", function(e) {
+    if (!e.target.closest("#userChipD")) {
+      const m = document.getElementById("userMenuD");
+      if (m) m.style.display = "none";
+    }
+  });
+</script>
+<script>
+  // Wire up bottom export button
+  document.getElementById("exportBtnDBottom")?.addEventListener("click", exportJSONDash);
+</script>
+</body>
+</html>

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LifeTracker — Daily Log</title>
+  <script src="auth.js"></script>
+  <script>
+    // Auth guard — runs before page renders
+    (function() {
+      if (!Auth.isLoggedIn()) window.location.href = "login.html";
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Page-specific extras */
+    .nutrition-preview {
+      display: none;
+      gap: 24px;
+      justify-content: center;
+      padding: 14px 20px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 10px;
+    }
+    .manual-macros-grid {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 16px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .section-heading {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .vitals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media(max-width:600px){ .vitals-grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ─── SIDEBAR ─────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🏃</div>
+      <div class="logo-text">LifeTracker</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Navigation</div>
+      <a class="nav-item active" href="index.html">
+        <span class="nav-icon">📝</span> Daily Log
+      </a>
+      <a class="nav-item" href="dashboard.html">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+
+      <div class="nav-section" style="margin-top:8px">Log Sections</div>
+      <button class="nav-item" onclick="switchTab('log')">
+        <span class="nav-icon">🍽️</span> Food & Vitals
+      </button>
+      <button class="nav-item" onclick="switchTab('history')">
+        <span class="nav-icon">📅</span> History
+      </button>
+      <button class="nav-item" onclick="switchTab('custom-food')">
+        <span class="nav-icon">➕</span> Custom Foods
+      </button>
+      <button class="nav-item" onclick="switchTab('settings')">
+        <span class="nav-icon">⚙️</span> Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="flex items-center justify-between">
+        <span style="font-size:13px;color:var(--text-secondary)">🌙 Dark Mode</span>
+        <label class="toggle">
+          <input type="checkbox" id="darkModeToggle" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <a class="nav-item" href="dashboard.html" style="margin-top:4px">
+        <span class="nav-icon">🚀</span> Open Dashboard
+      </a>
+    </div>
+  </aside>
+
+  <!-- Sidebar mobile overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- ─── MAIN ──────────────────────────────────────────────────── -->
+  <main class="main">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" id="hamburger">☰</button>
+        <div class="topbar-title">Daily Log</div>
+      </div>
+      <div class="topbar-actions">
+        <div class="flex items-center gap-2">
+          <input type="date" id="datePicker"
+            style="width:160px;padding:7px 10px;font-size:13px"
+            title="Select a date to view or edit" />
+          <button class="btn btn-secondary btn-sm" id="btnToday">Today</button>
+        </div>
+        <div id="userChip" style="display:flex;align-items:center;gap:8px;margin-left:4px;cursor:pointer;position:relative" onclick="toggleUserMenu()">
+          <div id="userAvatar" style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;border:2px solid var(--border)"></div>
+          <div id="userMenu" style="display:none;position:absolute;top:calc(100%+10px);right:0;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:190px;z-index:999;overflow:hidden">
+            <div style="padding:14px;border-bottom:1px solid var(--border)">
+              <div style="font-size:14px;font-weight:700;color:var(--text-primary)" id="menuName"></div>
+              <div style="font-size:11px;color:var(--text-muted)" id="menuUsername"></div>
+            </div>
+            <a href="dashboard.html" style="display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:13px;color:var(--text-secondary);text-decoration:none" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">📊 Dashboard</a>
+            <div style="border-top:1px solid var(--border)"></div>
+            <button onclick="Auth.logout()" style="display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:13px;color:#f87171;background:none;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">🚪 Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content">
+      <!-- Current date label -->
+      <div style="margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px" id="currentDateLabel">Today</div>
+          <div style="font-size:13px;color:var(--text-muted)">Track your health data below</div>
+        </div>
+        <a href="dashboard.html" class="btn btn-primary btn-sm">📊 View Dashboard →</a>
+      </div>
+
+      <!-- TAB BAR -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="log">🍽️ Log</button>
+        <button class="tab-btn" data-tab="history">📅 History</button>
+        <button class="tab-btn" data-tab="custom-food">🧪 Custom Foods</button>
+        <button class="tab-btn" data-tab="settings">⚙️ Settings</button>
+      </div>
+
+      <!-- ══════════════ TAB: LOG ══════════════ -->
+      <div class="tab-panel active" id="log">
+
+        <!-- VITALS CARD -->
+        <div class="card mb-4 fade-in">
+          <div class="section-heading">💪 Daily Vitals</div>
+          <div class="vitals-grid">
+            <div class="form-group">
+              <label>👟 Steps Walked</label>
+              <input type="number" id="inSteps" placeholder="e.g. 8000" min="0" max="100000" />
+            </div>
+            <div class="form-group">
+              <label>⚖️ Body Weight (kg)</label>
+              <input type="number" id="inWeight" placeholder="e.g. 70.5" min="20" max="300" step="0.1" />
+            </div>
+          </div>
+
+          <div class="form-group mt-4">
+            <label>😊 How are you feeling today?</label>
+            <div class="mood-grid" id="moodPicker"></div>
+          </div>
+
+          <div style="margin-top:18px">
+            <button class="btn btn-primary" id="saveVitalsBtn">💾 Save Vitals</button>
+          </div>
+        </div>
+
+        <!-- DAILY NUTRITION TOTALS BAR -->
+        <div class="card mb-4 fade-in" style="animation-delay:0.05s">
+          <div class="card-header">
+            <div class="card-title">📊 Today's Nutrition Summary</div>
+          </div>
+          <div id="macroBarWrap"></div>
+          <div style="margin-top:12px;font-size:14px;color:var(--text-secondary)" id="totalsCal">
+            No food logged yet
+          </div>
+        </div>
+
+        <!-- FOOD LOG TABLE -->
+        <div class="card mb-4 fade-in" style="animation-delay:0.10s">
+          <div class="card-header">
+            <div class="card-title">🍽️ Food Log</div>
+            <span class="badge" id="foodCountBadge">0 entries</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="food-table">
+              <thead>
+                <tr>
+                  <th>Meal</th>
+                  <th>Food</th>
+                  <th>Serving</th>
+                  <th>Calories</th>
+                  <th>Protein</th>
+                  <th>Carbs</th>
+                  <th>Fat</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="foodTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ADD FOOD FORM -->
+        <div class="card fade-in" style="animation-delay:0.15s">
+          <div class="section-heading">➕ Add Food Item</div>
+
+          <div class="form-grid">
+            <!-- Food search with autocomplete -->
+            <div class="form-group full">
+              <label>🔍 Food Name</label>
+              <div class="autocomplete-wrap">
+                <input type="text" id="foodSearch"
+                  placeholder="Type to search food database (rice, chicken, egg…)"
+                  autocomplete="off" />
+                <div class="autocomplete-list" id="acList"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>📏 Quantity</label>
+              <input type="number" id="foodQty" placeholder="e.g. 150" min="0.1" step="0.5" />
+            </div>
+
+            <div class="form-group">
+              <label>📐 Unit</label>
+              <select id="foodUnit">
+                <option value="g">g (grams)</option>
+                <option value="kg">kg</option>
+                <option value="ml">ml</option>
+                <option value="l">litre</option>
+                <option value="cup">cup (~240g)</option>
+                <option value="bowl">bowl (~250g)</option>
+                <option value="plate">plate (~350g)</option>
+                <option value="piece">piece (~100g)</option>
+                <option value="slice">slice (~30g)</option>
+                <option value="tbsp">tablespoon</option>
+                <option value="tsp">teaspoon</option>
+                <option value="oz">oz</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>🕐 Meal Time</label>
+              <select id="foodMeal">
+                <option value="Breakfast">🌅 Breakfast</option>
+                <option value="Lunch">☀️ Lunch</option>
+                <option value="Dinner">🌙 Dinner</option>
+                <option value="Snack">🍎 Snack</option>
+                <option value="Other">🍽️ Other</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Nutrition preview -->
+          <div class="nutrition-preview" id="nutritionPreview"></div>
+
+          <!-- Manual macro input (for unlisted foods) -->
+          <div style="margin-top:14px">
+            <button class="btn btn-secondary btn-sm" id="toggleManualBtn">
+              📝 Not in database? Enter macros manually
+            </button>
+          </div>
+
+          <div class="manual-macros-grid" id="manualMacrosWrap">
+            <div class="form-group">
+              <label>🔥 Calories (kcal)</label>
+              <input type="number" id="manCal" placeholder="e.g. 320" min="0" />
+            </div>
+            <div class="form-group">
+              <label>💪 Protein (g)</label>
+              <input type="number" id="manProt" placeholder="e.g. 15" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label>🌾 Carbohydrates (g)</label>
+              <input type="number" id="manCarb" placeholder="e.g. 45" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label>🧈 Fat (g)</label>
+              <input type="number" id="manFat" placeholder="e.g. 8" min="0" step="0.1" />
+            </div>
+            <div class="form-group full" style="margin-top:4px">
+              <div style="font-size:12px;color:var(--text-muted)">
+                💡 This food will be saved to your custom database for future use.
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-4">
+            <button class="btn btn-primary" id="addFoodBtn">➕ Add Food</button>
+            <button class="btn btn-secondary" id="clearFoodBtn">✕ Clear</button>
+          </div>
+        </div>
+
+      </div><!-- /tab:log -->
+
+      <!-- ══════════════ TAB: HISTORY ══════════════ -->
+      <div class="tab-panel" id="history">
+        <div class="card fade-in">
+          <div class="card-header">
+            <div class="card-title">📅 History</div>
+            <span class="text-muted text-sm">Click any day to edit</span>
+          </div>
+          <div id="historyList">
+            <div class="empty-state">
+              <div class="empty-icon">📅</div>
+              <div class="empty-title">Loading history…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: CUSTOM FOODS ══════════════ -->
+      <div class="tab-panel" id="custom-food">
+        <div class="card fade-in">
+          <div class="card-header">
+            <div class="card-title">🧪 My Custom Foods</div>
+          </div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+            Foods you've manually entered are saved here and appear in the search autocomplete.
+          </p>
+          <div id="customFoodList"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: SETTINGS ══════════════ -->
+      <div class="tab-panel" id="settings">
+        <div class="card fade-in">
+          <div class="section-heading">👤 Profile & Goals</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Your Name</label>
+              <input type="text" id="settingName" placeholder="Enter your name" />
+            </div>
+            <div class="form-group">
+              <label>🔥 Daily Calorie Goal (kcal)</label>
+              <input type="number" id="settingCal" placeholder="2000" min="500" max="6000" />
+            </div>
+            <div class="form-group">
+              <label>💪 Daily Protein Goal (g)</label>
+              <input type="number" id="settingProt" placeholder="120" min="10" max="500" />
+            </div>
+            <div class="form-group full">
+              <label>👟 Daily Steps Goal</label>
+              <input type="number" id="settingSteps" placeholder="10000" min="1000" max="100000" />
+            </div>
+          </div>
+          <button class="btn btn-primary mt-4" id="saveSettingsBtn">💾 Save Settings</button>
+        </div>
+
+        <div class="card mt-4 fade-in" style="animation-delay:0.1s">
+          <div class="section-heading">📦 Data Management</div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Export Data</div>
+              <div class="settings-sub">Download all your data as a JSON file</div>
+            </div>
+            <button class="btn btn-secondary" id="exportJSONBtn">⬇️ Export JSON</button>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Import Data</div>
+              <div class="settings-sub">Restore from a previously exported JSON file</div>
+            </div>
+            <button class="btn btn-secondary" id="importJSONBtn">⬆️ Import JSON</button>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label" style="color:var(--danger)">Clear All Data</div>
+              <div class="settings-sub">Permanently delete all tracked data</div>
+            </div>
+            <button class="btn btn-danger" id="clearDataBtn">🗑️ Clear Data</button>
+          </div>
+        </div>
+
+        <div class="card mt-4 fade-in" style="animation-delay:0.2s">
+          <div class="section-heading">ℹ️ About</div>
+          <p style="font-size:13.5px;color:var(--text-secondary);line-height:1.8">
+            <strong>LifeTracker v1.0</strong> — A fully offline personal health tracking app.<br/>
+            All data is stored locally in your browser's <code>localStorage</code>.<br/>
+            No internet required · No account needed · Your data stays on your device.
+          </p>
+          <div style="margin-top:14px;font-size:13px;color:var(--text-muted)">
+            Built with HTML, CSS & JavaScript · Food DB: 60+ common foods included
+          </div>
+        </div>
+
+      </div><!-- /tab:settings -->
+
+    </div><!-- /content -->
+  </main>
+
+</div><!-- /app-shell -->
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Scripts (order matters) -->
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+  // Populate user chip in topbar
+  (function() {
+    const s = Auth.getSession();
+    if (!s) return;
+    const av = document.getElementById("userAvatar");
+    const mn = document.getElementById("menuName");
+    const mu = document.getElementById("menuUsername");
+    if (av) {
+      const a = Auth.getUsers()[s.username]?.avatar || Auth.generateAvatar(s.displayName);
+      av.textContent = a.initials;
+      av.style.background = a.color;
+      av.style.color = "#0f1117";
+    }
+    if (mn) mn.textContent = s.displayName;
+    if (mu) mu.textContent = "@" + s.username;
+  })();
+
+  function toggleUserMenu() {
+    const m = document.getElementById("userMenu");
+    if (m) m.style.display = m.style.display === "none" ? "block" : "none";
+  }
+  document.addEventListener("click", function(e) {
+    if (!e.target.closest("#userChip")) {
+      const m = document.getElementById("userMenu");
+      if (m) m.style.display = "none";
+    }
+  });
+</script>
+</body>
+</html>
